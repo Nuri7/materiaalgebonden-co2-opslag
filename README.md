@@ -1,4 +1,4 @@
-# Koolstofboek
+# materiaalgebonden-co2-opslag
 
 An open reference implementation of the Dutch determination method for **material-bound CO₂ storage**
 (Construction Stored Carbon) — the arithmetic, the eligibility gates, and a fixture suite anyone can test
@@ -86,13 +86,16 @@ NMD terms forbid licensees from publishing the raw data in any case.
 
 ## Status
 
-Phase 1 of `IMPLEMENTATION_PLAN.md`. The calculation core and fixtures are done and green (17/17).
-The product data layer (Phase 2) is next, and is gated on a coverage retest — see `PHASE0-RESULTS.md`.
+The calculation core and the conformance suite are done and green: 18 tests, 11 published cases.
+The ingest reads ÖKOBAUDAT today. The product data layer is next.
 
-Measured on one real building: **18.2% of biobased rows** reach an official determination from openly
-available data, while **~85% of the stored carbon** does. The dominant blocker is not the arithmetic — it is
-that EPDs do not declare a service life (0 of ~25 records sampled; two manufacturers decline by design) and
-that no public record states which product was installed.
+Measured by hand on one real Dutch building (103 dwellings, timber structure, an issued carbon
+certification): **18% of biobased rows** reach an official determination from openly available data, while
+**~85% of the stored carbon** does. The blocker is not the arithmetic. EPDs almost never declare a service
+life — 0 of ~25 records sampled, and two manufacturers state outright that they will not declare one — and
+no public record says which product was actually installed.
+
+Live: <https://carbon.resourcepaspoort.app>
 
 ## Licence
 
