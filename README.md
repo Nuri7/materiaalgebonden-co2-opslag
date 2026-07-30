@@ -44,13 +44,14 @@ Each of these is a real, verified EN15804+A2 EPD. They are the reason the gates 
 | Concrete foundation (INIES 20240839958-FCe) | Variant 4.iii is negative. Formula 5 is a plain sum with no clamping rule, so read literally it **subtracts** from the building total. Here it contributes 0 and is flagged. |
 | Thünen wood fibre insulation (ÖKOBAUDAT 34633906) | The EPD books −11.102 in A3 and exactly +11.102 in A5: the packaging cancels itself. Summing A1–A5 reproduces the separately declared biogenic carbon to **0.006%**; reading A1–A3 only — as the ONCRA protocol prescribes — **overstates by 4.69%**. |
 | Thünen CLT (ÖKOBAUDAT d8d40f2d) | Positive control. No packaging, so both independent routes agree to **0.002%**. |
+| Ecophon Master B Straw (environdec 3aa1f8dc) | Over A1–A5 the mandated variant returns **negative** storage and the row blocks; over A1–A3, as the ONCRA protocol prescribes, it returns **+0.107** and would pass. One product, two protocols, opposite sign. |
 | Poppies, Amsterdam (Oncra RJM-C-001) | Two DERIX MRPI EPDs over the documented 2,369 m³ reproduce the **certified 1,826 t to within 0.1%**. The method works where the data exists. |
 
 ## Rebuilding the product data
 
 ```bash
-node scripts/ingest-okobaudat.mjs            # Thünen wood datasets
-node scripts/ingest-okobaudat.mjs --owner X  # any owner
+node scripts/ingest-soda4lca.mjs                                            # Thünen wood datasets
+node scripts/ingest-soda4lca.mjs --node environdec --search "Glulam,Plywood"
 ```
 
 We ship the recipe, not the meal. ÖKOBAUDAT permits free redistribution of its data *unmodified*
@@ -59,24 +60,35 @@ that. So the ingest script is ours (Apache-2.0) and rebuilds the dataset from so
 minute. Output lands in `data/`, which is git-ignored — no stale committed copy that quietly
 expires.
 
-**What the German national wood dataset actually contains** (20 products, EN15804+A2, measured
-2026-07-30):
+**Two nodes, opposite gaps, same outcome.** Measured 2026-07-30 on every EN15804+A2 timber and
+biobased dataset each node would give us:
 
-| | |
-|---|---|
-| biogenic carbon in kg C — Variant 4.ii usable | **20/20** |
-| packaging carbon declared separately | **20/20** |
-| A5 declared | 20/20 |
-| **A4 declared** | **0/20** |
-| registration number — required by Tabel 2 | **0/20** |
-| reaching status `bepaald` | **0/20** |
+| | ÖKOBAUDAT (Thünen, 20) | environdec (174) |
+|---|---|---|
+| biogenic carbon in kg C — Variant 4.ii | **20/20** | **0/174** |
+| packaging carbon declared separately | 20/20 | 0/174 |
+| declared unit resolvable from the flow | 20/20 | 0/174 |
+| A4 declared | **0/20** | 168/174 |
+| A5 declared | 20/20 | 166/174 |
+| Variant 4.iii derivable | 20/20 * | 131/174 |
+| registration number — required by Tabel 2 | **0/20** | 172/174 |
+| service life declared | **0/20** | **0/174** |
+| **reaching status `bepaald`** | **0/20** | **0/174** |
 
-So on Germany's reference data for timber construction, the variant the method *mandates* for
-calculation software is the one that cannot be derived, while the variant it ranks *higher* is
-available for every single product. And because these are representative datasets without a
-registration number, none of them can reach an official determination at all.
+\* with a missing A4 treated as not declared — see the interpretation note in `src/rulesets.js`.
 
-Declared kg C versus −(A1–A3) across the 20: median 0.445%, max 4.690%.
+Neither node is sufficient on its own, and they fail in opposite directions: ÖKOBAUDAT gives the
+physical quantities but no registration number, environdec gives the registration numbers but no
+physical quantities. **Neither declares a service life, so across 194 datasets not one product can
+reach an official determination.**
+
+Two cross-checks worth having:
+
+- Where both routes exist (ÖKOBAUDAT, 20 products), the separately declared kg C and the A1–A5
+  sum agree to a **median 0.002%, max 0.038%**. The arithmetic is sound; the data is not the problem.
+- Reading A1–A3 only, as the ONCRA protocol prescribes, disagrees with the declared kg C by a
+  **median 0.445%, max 4.690%** — and on 18 of the 131 derivable environdec records the mandated
+  A1–A5 sum returns **negative** stored carbon, of which 5 **flip sign** between the two protocols.
 
 ## What it deliberately does not do
 

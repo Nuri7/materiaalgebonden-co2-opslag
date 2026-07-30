@@ -17,17 +17,35 @@
  * expires.
  *
  * Usage:
- *   node scripts/ingest-okobaudat.mjs                 # Thünen wood datasets (the default set)
- *   node scripts/ingest-okobaudat.mjs --owner Derix   # any owner substring
- *   node scripts/ingest-okobaudat.mjs --all           # every EN15804+A2 dataset (slow)
+ *   node scripts/ingest-soda4lca.mjs                              # Thünen wood datasets
+ *   node scripts/ingest-soda4lca.mjs --owner Derix                # any owner substring
+ *   node scripts/ingest-soda4lca.mjs --node environdec --search "Cross laminated,Glulam"
+ *   node scripts/ingest-soda4lca.mjs --all                        # everything (slow)
  */
 
 import { writeFile, mkdir } from 'node:fs/promises'
 import { computeRow } from '../src/csc.js'
 import { CO2_PER_C } from '../src/rulesets.js'
 
-const BASE = 'https://oekobaudat.de/OEKOBAU.DAT/resource'
-const DATASTOCK = 'cd2bda71-760b-4fcc-8a0b-3877c10000a8'
+/**
+ * soda4LCA nodes that serve EN15804+A2 data without authentication.
+ * They speak the same REST contract but fail in opposite directions — see the summary this
+ * script prints. environdec needs retries: its TLS drops connections under load.
+ */
+const NODES = {
+  okobaudat: {
+    base: 'https://oekobaudat.de/OEKOBAU.DAT/resource',
+    datastock: 'cd2bda71-760b-4fcc-8a0b-3877c10000a8',
+    label: 'ÖKOBAUDAT (BBSR/BMWSB)',
+    terms: 'unmodified redistribution permitted with the source named',
+  },
+  environdec: {
+    base: 'https://data.environdec.com/resource',
+    datastock: '3689a469-b410-4a40-84ef-f5d5a2ed1b18',
+    label: 'EPD International (environdec)',
+    terms: 'query only — General Terms of Use prohibit storing or redistributing records',
+  },
+}
 
 /** Both compliance UUIDs mean EN 15804+A2. Filtering on only the first silently drops ~900 records. */
 const A2_COMPLIANCE = new Set([
@@ -36,14 +54,34 @@ const A2_COMPLIANCE = new Set([
 ])
 
 const args = process.argv.slice(2)
-const ownerFilter = args.includes('--all')
-  ? null
-  : (args[args.indexOf('--owner') + 1] ?? 'Thünen')
+const arg = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback)
 
-const j = async (url) => {
-  const r = await fetch(url, { headers: { accept: 'application/json' } })
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText} for ${url}`)
-  return r.json()
+const nodeName = arg('--node', 'okobaudat')
+const NODE = NODES[nodeName]
+if (!NODE) {
+  console.error(`Unknown node "${nodeName}". Known: ${Object.keys(NODES).join(', ')}`)
+  process.exit(1)
+}
+const BASE = NODE.base
+const DATASTOCK = NODE.datastock
+const ownerFilter = args.includes('--all') || args.includes('--search') ? null : arg('--owner', 'Thünen')
+/** environdec is a global registry, so select by name instead of by owner. */
+const searchTerms = arg('--search', null)?.split(',').map((t) => t.trim()).filter(Boolean) ?? null
+
+/** environdec drops connections under load; retry with backoff rather than losing records. */
+const j = async (url, attempts = 4) => {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(url, { headers: { accept: 'application/json' } })
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
+      return await r.json()
+    } catch (e) {
+      lastErr = e
+      await new Promise((res) => setTimeout(res, 400 * 2 ** i))
+    }
+  }
+  throw new Error(`${lastErr?.message} for ${url}`)
 }
 
 const txt = (arr, lang = 'en') =>
@@ -60,6 +98,23 @@ async function listAll() {
     if (out.length >= page.totalCount || page.data.length === 0) break
   }
   return out
+}
+
+/**
+ * Name search is literal substring matching with no synonym handling, on both nodes. Never rely
+ * on a single term: on ÖKOBAUDAT "Bewehrungsstahl" returns 2 hits and "Betonstahl" returns 10 for
+ * the same product class.
+ */
+async function listBySearch(terms) {
+  const seen = new Map()
+  for (const t of terms) {
+    const page = await j(
+      `${BASE}/datastocks/${DATASTOCK}/processes?search=true&distributed=false&format=json&pageSize=200&name=${encodeURIComponent(t)}`
+    )
+    for (const d of page.data ?? []) seen.set(d.uuid, d)
+    console.log(`    "${t}" → ${page.totalCount ?? 0} hits`)
+  }
+  return [...seen.values()]
 }
 
 /** Pull GWP-biogenic per module out of the LCIA block. */
@@ -108,9 +163,10 @@ async function referenceFlow(process) {
 }
 
 async function main() {
-  console.log(`Enumerating datastock…`)
-  const all = await listAll()
-  console.log(`  ${all.length} datasets in stock`)
+  console.log(`Node: ${NODE.label}`)
+  console.log(`Terms: ${NODE.terms}\n`)
+  const all = searchTerms ? await listBySearch(searchTerms) : await listAll()
+  console.log(`  ${all.length} datasets ${searchTerms ? 'matched' : 'in stock'}`)
 
   const candidates = all.filter((d) => {
     if (ownerFilter && !(d.owner ?? '').includes(ownerFilter)) return false
@@ -150,7 +206,7 @@ async function main() {
         ...flow,
         gwpBiogenic: modules,
         modulesPresent: modules ? Object.keys(modules).sort().join('+') : null,
-        source: 'ÖKOBAUDAT (BBSR/BMWSB)',
+        source: NODE.label,
         sourceUrl: `${BASE}/processes/${d.uuid}?format=html`,
         retrieved: new Date().toISOString().slice(0, 10),
       }
@@ -187,12 +243,12 @@ async function main() {
   process.stdout.write(' '.repeat(70) + '\r')
 
   await mkdir(new URL('../data/', import.meta.url), { recursive: true })
-  const slug = (ownerFilter ?? 'all')
+  const slug = (ownerFilter ?? (searchTerms ? 'search' : 'all'))
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-  const outfile = new URL(`../data/okobaudat-${slug}.json`, import.meta.url)
+  const outfile = new URL(`../data/${nodeName}-${slug}.json`, import.meta.url)
   await writeFile(outfile, JSON.stringify(records, null, 2))
 
   /* ---- what the data actually says --------------------------------------- */

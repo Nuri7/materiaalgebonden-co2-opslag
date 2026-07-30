@@ -293,6 +293,35 @@ export const CASES = [
     },
   },
   {
+    id: 'sign-flip-between-protocols',
+    title: 'Stro-akoestiekpaneel: de protocolkeuze wisselt het teken',
+    source: 'environdec 3aa1f8dc-f119-418e-f0c2-08dcc122864f, Ecophon Master B Straw, EN15804+A2, geldig t/m 2029',
+    why:
+      'Het scherpste gevolg van een onvastgelegde ruleset. Over A1–A5 komt er negatieve opslag ' +
+      'uit en blokkeert de regel; over alleen A1–A3, zoals het ONCRA-protocol voorschrijft, komt ' +
+      'er een positief getal uit dat zo in een certificaat kan. Eén product, twee protocollen, ' +
+      'tegengesteld teken.',
+    run() {
+      const modules = { A1A3: -0.106917118547976, A4: -0.000637860204870506, A5: 0.169633963447241 }
+      const base = {
+        name: 'Ecophon Master B Straw',
+        quantity: 1,
+        epd: { registration: 'EPD-IES-0015819:001', standard: 'EN15804+A2', datasetType: 'specific', validUntil: '2029-12-31' },
+        rslYears: 50,
+        rslSource: 'user_asserted',
+        gwpBiogenic: modules,
+      }
+      const csc = computeRow(base, { ruleset: 'CSC-2026-02' })
+      const oncra = computeRow(base, { ruleset: 'ONCRA-BP-1.0', isAutomatedSoftware: false })
+      return [
+        { label: 'A1–A5 (Bepalingsmethode), kg CO₂e', got: csc.computed['4.iii'], want: -0.062079, tol: 1e-6 },
+        { label: 'A1–A3 (ONCRA-protocol), kg CO₂e', got: oncra.computed['4.iii'], want: 0.106917, tol: 1e-6 },
+        { label: 'Bepalingsmethode blokkeert', got: csc.blocking.includes('negative_variant3'), want: true },
+        { label: 'ONCRA levert een positief getal', got: oncra.computed['4.iii'] > 0, want: true },
+      ]
+    },
+  },
+  {
     id: 'poppies',
     title: 'Poppies, Amsterdam-Noord: gecertificeerd totaal gereproduceerd',
     source: 'Oncra-register RJM-C-001; DERIX MRPI 1.1.00667.2024 en 1.1.00666.2024',
