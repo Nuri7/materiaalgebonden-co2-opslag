@@ -192,6 +192,82 @@ export const CASES = [
     },
   },
   {
+    id: 'thunen-clt',
+    title: 'Thünen CLT: twee onafhankelijke routes komen uit op hetzelfde getal',
+    source: 'ÖKOBAUDAT d8d40f2d-fd1c-4239-ba9f-c1e33fd6f28f, Thünen-Institut für Holzforschung, EN15804+A2',
+    why:
+      'Positieve controle. De EPD declareert de biogene koolstof apart (215,12 kg C/m³) én als ' +
+      'GWP-biogeen per module. Zonder verpakking komen beide routes op 0,002% na uit op ' +
+      'hetzelfde getal — precies wat je verwacht als de methode klopt.',
+    run() {
+      const cBio = 215.12
+      const row = computeRow(
+        {
+          name: 'Brettsperrholz (Durchschnitt DE)',
+          quantity: 1,
+          epd: { registration: 'n/a', standard: 'EN15804+A2', datasetType: 'representative', validUntil: '2026-12-31' },
+          rslYears: null,
+          rslSource: 'unknown',
+          gwpBiogenic: { A1: -788.755, A2: 0, A3: 0, A1A3: -788.755, A5: 0 },
+          cBioPerUnit: cBio,
+        },
+        { ruleset: 'CSC-2026-02' }
+      )
+      const v2 = cBio * CO2_PER_C
+      return [
+        { label: 'Variant 2 uit kg C, kg CO₂e/m³', got: v2, want: 788.773, tol: 0.01 },
+        { label: 'Variant 3 over A1–A5, kg CO₂e/m³', got: row.computed['4.iii'], want: 788.755, tol: 0.001 },
+        { label: 'verschil tussen beide routes, %', got: ((row.computed['4.iii'] - v2) / v2) * 100, want: 0, tol: 0.01 },
+        { label: 'geen registratienummer → niet officieel', got: row.blocking.includes('not_a_specific_epd'), want: true },
+      ]
+    },
+  },
+  {
+    id: 'thunen-woodfibre',
+    title: 'Thünen houtvezelisolatie: A5 ís de verpakkingscorrectie',
+    source: 'ÖKOBAUDAT 34633906-b5d4-48d8-adf4-90037a7499d9, Thünen-Institut für Holzforschung, EN15804+A2',
+    why:
+      'Hier zit wél verpakking in (3,03 kg C). De EPD boekt −11,102 in A3 en exact +11,102 in A5: ' +
+      'die heffen elkaar op. Wie A1–A5 sommeert komt op 0,006% na uit op de apart gedeclareerde ' +
+      'koolstof; wie alleen A1–A3 leest — zoals het ONCRA-protocol voorschrijft — zit er 4,7% boven.',
+    run() {
+      const cBio = 64.64
+      const modules = { A1: -237.02761592438318, A2: 0, A3: -11.10244839900681, A1A3: -248.13006432339, A5: 11.10244839900681 }
+      const csc = computeRow(
+        {
+          name: 'Holzfaserdämmstoff',
+          quantity: 1,
+          epd: { registration: 'n/a', standard: 'EN15804+A2', datasetType: 'representative', validUntil: '2026-12-31' },
+          rslYears: null,
+          rslSource: 'unknown',
+          gwpBiogenic: modules,
+          cBioPerUnit: cBio,
+        },
+        { ruleset: 'CSC-2026-02' }
+      )
+      const oncra = computeRow(
+        {
+          name: 'Holzfaserdämmstoff',
+          quantity: 1,
+          epd: { registration: 'n/a', standard: 'EN15804+A2', datasetType: 'representative', validUntil: '2026-12-31' },
+          rslYears: null,
+          rslSource: 'unknown',
+          gwpBiogenic: modules,
+          cBioPerUnit: cBio,
+        },
+        { ruleset: 'ONCRA-BP-1.0', isAutomatedSoftware: false }
+      )
+      const v2 = cBio * CO2_PER_C
+      return [
+        { label: 'A3 en A5 heffen elkaar op', got: Math.abs(modules.A3 + modules.A5) < 1e-9, want: true },
+        { label: 'Variant 2 uit kg C, kg CO₂e/m³', got: v2, want: 237.013, tol: 0.01 },
+        { label: 'A1–A5 (Bepalingsmethode), kg CO₂e/m³', got: csc.computed['4.iii'], want: 237.028, tol: 0.001 },
+        { label: 'A1–A3 (ONCRA-protocol), kg CO₂e/m³', got: oncra.computed['4.iii'], want: 248.130, tol: 0.001 },
+        { label: 'overschatting door A1–A3-lezing, %', got: ((248.13 - v2) / v2) * 100, want: 4.69, tol: 0.01 },
+      ]
+    },
+  },
+  {
     id: 'ruleset-delta',
     title: 'Dezelfde EPD, twee protocollen, twee getallen',
     source: 'CSC-2026-02 Box 5 vs. ONCRA-BP-1.0 §2.1.3',

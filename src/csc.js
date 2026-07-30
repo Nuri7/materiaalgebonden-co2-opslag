@@ -73,9 +73,10 @@ export function formula3(components) {
  * @param {Record<string, number|null|undefined>} modules e.g. {A1A3:-762, A4:0.006, A5:0.34}
  * @param {string[]} required
  */
-export function sumGwpBiogenic(modules, required) {
+export function sumGwpBiogenic(modules, required, optional = []) {
   const used = {}
   const missing = []
+  const notDeclared = []
   let usedAggregate = false
 
   for (const key of required) {
@@ -90,14 +91,18 @@ export function sumGwpBiogenic(modules, required) {
       usedAggregate = true
     }
     if (typeof v !== 'number' || !Number.isFinite(v)) {
-      missing.push(key)
+      // A module the ruleset marks optional (A4 = transport to site) is legitimately not
+      // declared in a cradle-to-gate product declaration. Treat as zero, but record it —
+      // an interpretation must never be invisible.
+      if (optional.includes(key)) notDeclared.push(key)
+      else missing.push(key)
       continue
     }
     used[key] = v
   }
 
   const sum = Object.values(used).reduce((a, b) => a + b, 0)
-  return { sum, used, missing, usedAggregate }
+  return { sum, used, missing, notDeclared, usedAggregate }
 }
 
 /**
@@ -168,13 +173,14 @@ export function computeRow(row, opts = {}) {
   // Variant 4.iii — -1 * sum of GWP-biogenic over the ruleset's modules
   let v3 = null
   if (row.gwpBiogenic) {
-    v3 = sumGwpBiogenic(row.gwpBiogenic, rs.variant3Modules)
+    v3 = sumGwpBiogenic(row.gwpBiogenic, rs.variant3Modules, rs.variant3OptionalModules ?? [])
     if (v3.missing.length === 0) {
       out.computed['4.iii'] = -1 * v3.sum
     } else {
       flags.push(`modules_missing:${v3.missing.join('+')}`)
     }
     if (v3.usedAggregate) flags.push('aggregate_preferred_over_components')
+    if (v3.notDeclared.length) flags.push(`modules_not_declared_treated_as_zero:${v3.notDeclared.join('+')}`)
   }
   // Variant 4.iv — indicative fallback, wood >= 95% woody biomass
   if (row.physical && typeof row.physical.density === 'number') {

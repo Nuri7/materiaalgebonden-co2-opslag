@@ -42,7 +42,41 @@ Each of these is a real, verified EN15804+A2 EPD. They are the reason the gates 
 | Planed spruce (EPD-IES-0031212:001) | Declares GWP-biogenic A1–A3 = **+2.47** kg CO₂e/m³ with A4/A5 undeclared, while declaring 230 kg C in the product. The mandatory variant is not derivable → block. Assume the missing modules are zero, as a naive tool does, and it returns **negative stored carbon for solid spruce**. |
 | Congo-Basin decking (INIES 20230634171) | Variant 4.iii = 62.57 vs 4.ii = 30.43 kg CO₂e/m² — **+105.6%**, from a negative A5 booking the substructure's biogenic uptake. The method states verbatim that this variant is "altijd conservatief". |
 | Concrete foundation (INIES 20240839958-FCe) | Variant 4.iii is negative. Formula 5 is a plain sum with no clamping rule, so read literally it **subtracts** from the building total. Here it contributes 0 and is flagged. |
+| Thünen wood fibre insulation (ÖKOBAUDAT 34633906) | The EPD books −11.102 in A3 and exactly +11.102 in A5: the packaging cancels itself. Summing A1–A5 reproduces the separately declared biogenic carbon to **0.006%**; reading A1–A3 only — as the ONCRA protocol prescribes — **overstates by 4.69%**. |
+| Thünen CLT (ÖKOBAUDAT d8d40f2d) | Positive control. No packaging, so both independent routes agree to **0.002%**. |
 | Poppies, Amsterdam (Oncra RJM-C-001) | Two DERIX MRPI EPDs over the documented 2,369 m³ reproduce the **certified 1,826 t to within 0.1%**. The method works where the data exists. |
+
+## Rebuilding the product data
+
+```bash
+node scripts/ingest-okobaudat.mjs            # Thünen wood datasets
+node scripts/ingest-okobaudat.mjs --owner X  # any owner
+```
+
+We ship the recipe, not the meal. ÖKOBAUDAT permits free redistribution of its data *unmodified*
+with the source named; a converted, filtered extract is modified, and the terms are silent on
+that. So the ingest script is ours (Apache-2.0) and rebuilds the dataset from source in about a
+minute. Output lands in `data/`, which is git-ignored — no stale committed copy that quietly
+expires.
+
+**What the German national wood dataset actually contains** (20 products, EN15804+A2, measured
+2026-07-30):
+
+| | |
+|---|---|
+| biogenic carbon in kg C — Variant 4.ii usable | **20/20** |
+| packaging carbon declared separately | **20/20** |
+| A5 declared | 20/20 |
+| **A4 declared** | **0/20** |
+| registration number — required by Tabel 2 | **0/20** |
+| reaching status `bepaald` | **0/20** |
+
+So on Germany's reference data for timber construction, the variant the method *mandates* for
+calculation software is the one that cannot be derived, while the variant it ranks *higher* is
+available for every single product. And because these are representative datasets without a
+registration number, none of them can reach an official determination at all.
+
+Declared kg C versus −(A1–A3) across the 20: median 0.445%, max 4.690%.
 
 ## What it deliberately does not do
 

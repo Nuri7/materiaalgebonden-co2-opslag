@@ -56,6 +56,18 @@ export const RULESETS = {
     superseded_by: 'CSC-2026-02',
     /** Modules summed by Variant 4.iii. */
     variant3Modules: ['A1A3', 'A4', 'A5'],
+    /**
+     * INTERPRETATION, and it is ours — the method does not address it.
+     * A4 is transport to site: project-specific, and legitimately not declared in a
+     * cradle-to-gate product declaration. Requiring it makes Variant 3 underivable on every
+     * one of the 20 Thünen wood datasets (0/20 declare A4), even though A1–A3 + A5 reproduces
+     * the separately declared biogenic carbon content to within 0.01% there.
+     * A5 is different: that is where packaging carbon booked in A1–A3 is released again, so its
+     * absence means packaging cannot be netted out and the result would be overstated.
+     * So: a missing A4 is treated as zero and flagged; a missing A5 blocks.
+     * Question is out with the method owner.
+     */
+    variant3OptionalModules: ['A4'],
     /** Variant 4.iv divides by (1 + omega/100). */
     variant4MoistureDivisor: true,
     variant4Cf: 0.45,
@@ -79,6 +91,8 @@ export const RULESETS = {
     label: 'Bepalingsmethode materiaalgebonden CO2-opslag v1.1 (06-07-2026)',
     superseded_by: null,
     variant3Modules: ['A1A3', 'A4', 'A5'],
+    /** Same interpretation as v1.0 — see the note there. */
+    variant3OptionalModules: ['A4'],
     variant4MoistureDivisor: true,
     variant4Cf: 0.45,
     minRslYears: 35,
@@ -107,6 +121,7 @@ export const RULESETS = {
     superseded_by: null,
     /** DELTA: A1-A3 only, where the Bepalingsmethode sums A1..A5. */
     variant3Modules: ['A1A3'],
+    variant3OptionalModules: [],
     /** DELTA: no moisture divisor in 4.iv. */
     variant4MoistureDivisor: false,
     variant4Cf: 0.45,
