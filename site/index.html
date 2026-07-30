@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koolstof — open referentie-implementatie materiaalgebonden CO₂-opslag</title>
+<meta name="description" content="Open, controleerbare implementatie van de Bepalingsmethode materiaalgebonden CO₂-opslag (Construction Stored Carbon), met een publieke testset.">
+<style>
+  :root {
+    --bg: #fbfaf8; --fg: #1a1a17; --muted: #6b6a64; --line: #e2e0da;
+    --card: #ffffff; --accent: #2c6e49; --warn: #a4560c; --bad: #9b2226;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14140f; --fg:#eceae4; --muted:#9a978d; --line:#2c2b25;
+            --card:#1c1b16; --accent:#7fb069; --warn:#d99b52; --bad:#e07a72; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  .wrap { max-width: 62rem; margin:0 auto; padding: 3rem 1.25rem 5rem; }
+  h1 { font-size: clamp(1.5rem,4vw,2.1rem); line-height:1.2; margin:0 0 .5rem; letter-spacing:-.02em; }
+  h2 { font-size:1.15rem; margin:3rem 0 .75rem; letter-spacing:-.01em; }
+  .lede { font-size:1.05rem; color:var(--muted); max-width:46rem; margin:0 0 1.5rem; }
+  p { max-width: 46rem; }
+  a { color: var(--accent); }
+  code, .mono { font-family: var(--mono); font-size:.9em; }
+
+  .badges { display:flex; gap:.5rem; flex-wrap:wrap; margin:1.25rem 0 0; }
+  .badge { font:600 .75rem/1 var(--mono); padding:.4rem .6rem; border:1px solid var(--line);
+           border-radius:.35rem; background:var(--card); color:var(--muted); }
+  .badge.ok { color:var(--accent); border-color:color-mix(in oklab, var(--accent) 40%, var(--line)); }
+
+  .note { border-left:3px solid var(--warn); padding:.75rem 0 .75rem 1rem; margin:2rem 0;
+          color:var(--muted); font-size:.95rem; max-width:46rem; }
+
+  .case { border:1px solid var(--line); border-radius:.5rem; background:var(--card);
+          margin:0 0 .75rem; overflow:hidden; }
+  .case > summary { cursor:pointer; padding:.85rem 1rem; display:flex; gap:.75rem;
+                    align-items:baseline; list-style:none; }
+  .case > summary::-webkit-details-marker { display:none; }
+  .case[open] > summary { border-bottom:1px solid var(--line); }
+  .dot { flex:none; width:.55rem; height:.55rem; border-radius:50%; background:var(--accent);
+         transform:translateY(-1px); }
+  .dot.fail { background:var(--bad); }
+  .case .title { font-weight:600; }
+  .case .src { color:var(--muted); font-size:.82rem; font-family:var(--mono); margin-left:auto; text-align:right; }
+  .body { padding: .9rem 1rem 1.1rem; }
+  .why { color:var(--muted); font-size:.93rem; margin:0 0 .9rem; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  td { padding:.4rem .5rem; border-top:1px solid var(--line); vertical-align:top; }
+  td:first-child { padding-left:0; }
+  td.num { font-family:var(--mono); text-align:right; white-space:nowrap; }
+  td.mark { width:1.5rem; text-align:center; color:var(--accent); }
+  td.mark.fail { color:var(--bad); }
+  .scroll { overflow-x:auto; }
+
+  ul.gates { columns: 2 14rem; gap:1.25rem; padding-left:1.1rem; font-family:var(--mono);
+             font-size:.85rem; color:var(--muted); }
+  footer { margin-top:4rem; padding-top:1.5rem; border-top:1px solid var(--line);
+           color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Materiaalgebonden CO₂-opslag, narekenbaar</h1>
+  <p class="lede">
+    Een open implementatie van de Nederlandse Bepalingsmethode materiaalgebonden CO₂-opslag
+    (Construction Stored Carbon) — de rekenregels, de uitsluitingsgronden, en een publieke testset
+    waar iedereen zijn eigen instrument tegenaan kan leggen.
+  </p>
+  <div class="badges" id="badges"></div>
+
+  <div class="note">
+    <strong>Wat dit niet is.</strong> Geen certificering, geen MPG- of MKI-waarde, en geen
+    gevalideerd rekeninstrument. De uitkomst is een bepaling van opgeslagen koolstof onder de
+    genoemde versie van de methode, en mag niet als officiële milieuprestatieberekening worden
+    gepresenteerd. Onafhankelijk gebouwd; niet verbonden aan of goedgekeurd door Stichting
+    Climate Cleanup.
+  </div>
+
+  <h2>Waarom</h2>
+  <p>
+    Vier Nederlandse instrumenten rapporteren een indicator voor materiaalgebonden CO₂-opslag.
+    Geen enkele publiceert een conforme methode, en twee gebruiken aantoonbaar een andere — een
+    doorlopende levensduurfactor in plaats van de harde grens bij 35 jaar, wat bij een levensduur
+    van 40 jaar ongeveer een factor twee scheelt. Het referentie-instrument van de methode zelf is
+    een spreadsheet met een handmatig overgetypte producttabel waarvan een deel is verlopen.
+  </p>
+  <p>
+    Het gat is dus niet nóg een rekentool. Het is een controleerbare: dezelfde invoer, dezelfde
+    getallen, en een openbare verzameling gevallen waarin de voorgeschreven variant zich anders
+    gedraagt dan de methode beschrijft.
+  </p>
+
+  <h2>De testset</h2>
+  <p style="margin-bottom:1.25rem">
+    Draait live in je browser, met dezelfde code als de <span class="mono">node --test</span>-suite.
+    Elk geval verwijst naar een echt document.
+  </p>
+  <div id="cases"></div>
+
+  <h2>Uitsluitingsgronden</h2>
+  <p>
+    Elke regel blokkeert met een machineleesbare reden, in plaats van te rapporteren terwijl het
+    getal toch in het totaal doortelt:
+  </p>
+  <ul class="gates">
+    <li>rsl_unknown</li><li>rsl_lt_35</li><li>epd_expired</li><li>epd_not_a2</li>
+    <li>not_a_specific_epd</li><li>no_verified_epd</li><li>modules_incomplete</li>
+    <li>negative_variant3</li><li>variant3_sign_implausible</li><li>variant_disagreement</li>
+    <li>fractions_not_summing_to_one</li><li>not_biobased</li>
+  </ul>
+  <p>
+    En er zijn altijd drie totalen, nooit één: het officiële totaal volgens Formule 5, een apart
+    indicatief subtotaal, en een uitsluitingsregister met per regel de reden.
+  </p>
+
+  <h2>Drie rulesets</h2>
+  <p>
+    De regels staan als data vast, nooit stilzwijgend gedefault, zodat elk opgeslagen getal
+    reproduceerbaar blijft na een wijziging van de methode:
+    <code>CSC-2026-01</code> (v1.0), <code>CSC-2026-02</code> (v1.1, geldend) en
+    <code>ONCRA-BP-1.0</code> — het protocol dat in de aanbestedingen van 2026 wordt genoemd.
+    Ze geven op dezelfde EPD verschillende getallen; zie het laatste testgeval.
+  </p>
+
+  <h2>Stand van zaken</h2>
+  <p>
+    Gemeten op één echt gebouw: <strong>18% van de biobased regels</strong> haalt een officiële
+    bepaling op basis van openbaar beschikbare gegevens, terwijl <strong>ongeveer 85% van de
+    opgeslagen koolstof</strong> dat wel doet. De blokkade zit niet in de rekenkunde — EPD's
+    declareren vrijwel nooit een levensduur (0 van circa 25 onderzochte records; twee fabrikanten
+    weigeren het principieel), en nergens ligt publiek vast wélk product is toegepast.
+  </p>
+
+  <footer>
+    Code onder Apache-2.0. Onafhankelijke implementatie; niet verbonden aan, goedgekeurd door of
+    onderdeel van Stichting Climate Cleanup, ONCRA of Stichting Nationale Milieudatabase.
+    Koolstoffracties zijn fysische meetwaarden met bronvermelding per waarde
+    (Van den Oever et al. 2024, WFBR-rapport 2545, DOI 10.18174/647711).
+  </footer>
+</div>
+
+<script type="module">
+  import { runConformance } from './lib/conformance.js'
+
+  const fmt = (v) =>
+    typeof v === 'number'
+      ? (Math.abs(v) >= 1000 ? v.toLocaleString('nl-NL', { maximumFractionDigits: 2 })
+                             : String(Math.round(v * 1e6) / 1e6))
+      : String(v)
+
+  const results = runConformance()
+  const passed = results.filter((r) => r.pass).length
+
+  document.getElementById('badges').innerHTML = `
+    <span class="badge ${passed === results.length ? 'ok' : ''}">${passed}/${results.length} gevallen slagen</span>
+    <span class="badge">Bepalingsmethode v1.1 · CSC-2026-02</span>
+    <span class="badge">geen dependencies</span>`
+
+  document.getElementById('cases').innerHTML = results
+    .map(
+      (r) => `
+      <details class="case">
+        <summary>
+          <span class="dot ${r.pass ? '' : 'fail'}"></span>
+          <span class="title">${r.title}</span>
+          <span class="src">${r.source}</span>
+        </summary>
+        <div class="body">
+          <p class="why">${r.why}</p>
+          ${r.error ? `<p class="why" style="color:var(--bad)">${r.error}</p>` : ''}
+          <div class="scroll"><table>
+            ${r.checks
+              .map(
+                (c) => `<tr>
+                  <td class="mark ${c.pass ? '' : 'fail'}">${c.pass ? '✓' : '✗'}</td>
+                  <td>${c.label}</td>
+                  <td class="num">${fmt(c.got)}</td>
+                  <td class="num" style="color:var(--muted)">${c.pass ? '' : `verwacht ${fmt(c.want)}`}</td>
+                </tr>`
+              )
+              .join('')}
+          </table></div>
+        </div>
+      </details>`
+    )
+    .join('')
+</script>
+</body>
+</html>

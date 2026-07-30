@@ -1,0 +1,22 @@
+Koolstofboek
+Copyright 2026 Nuri Bayram
+
+Licensed under the Apache License, Version 2.0.
+
+This project is an INDEPENDENT implementation of the determination method
+"Bepalingsmethode materiaalgebonden CO2-opslag" (Construction Stored Carbon),
+published by Stichting Climate Cleanup.
+
+It is NOT affiliated with, endorsed by, approved by, or connected to Stichting
+Climate Cleanup, ONCRA, Stichting Nationale Milieudatabase, or any programme
+operator whose data it reads.
+
+The method's text, tables and reporting templates are not reproduced here; this
+project implements the calculation rules and refers to the published documents.
+Carbon fraction values are physical measurements, carried with per-value
+attribution to their primary source (Van den Oever et al. 2024, WFBR Report 2545,
+DOI 10.18174/647711).
+
+Output of this software is a stored-carbon determination under the named rule set.
+It is NOT an MPG or MKI figure, this is NOT a validated rekeninstrument, and no
+output may be presented as an official environmental performance calculation.

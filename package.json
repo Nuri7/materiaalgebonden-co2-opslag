@@ -1,0 +1,36 @@
+{
+  "name": "materiaalgebonden-co2-opslag",
+  "version": "0.1.0",
+  "description": "Open reference implementation of the Dutch determination method for material-bound CO2 storage (Construction Stored Carbon). Not affiliated with or endorsed by Stichting Climate Cleanup.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./rulesets": "./src/rulesets.js"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "build:site": "cp src/csc.js src/rulesets.js src/conformance.js site/lib/"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "NOTICE"
+  ],
+  "keywords": [
+    "csc",
+    "biogenic-carbon",
+    "epd",
+    "en15804",
+    "lca",
+    "crcf"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nuri7/materiaalgebonden-co2-opslag.git"
+  }
+}
