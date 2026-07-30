@@ -339,3 +339,47 @@ test('Formula 5 reports three totals, never one', () => {
   close(t.officialKgCO2e, 100, 1e-9, 'official total excludes the indicative row')
   assert.ok(t.excluded[0].reasons.includes('not_biobased'))
 })
+
+/* ================================================================== *
+ * 6. Service life — the gate that blocks everything
+ * ================================================================== */
+
+test('a reference-table lifespan is a proposal, and the output says so', async () => {
+  const { checkGate } = await import('../src/service-life.js')
+
+  // Same untreated softwood, three elements, three verdicts.
+  assert.equal(checkGate('331.113.25').passes, true) // load-bearing wall, >= 50
+  assert.equal(checkGate('335.713.25').passes, false) // facade cladding, 30
+  assert.equal(checkGate('534.318.25').passes, false) // fence, 10
+
+  const row = computeRow(
+    {
+      name: 'gevelbekleding',
+      quantity: 1,
+      epd: { registration: 'E', standard: 'EN15804+A2', datasetType: 'specific', validUntil: '2030-01-01' },
+      rslSource: 'reference_table',
+      rslReference: '335.713.25',
+      gwpBiogenic: { A1A3: -700, A5: 0 },
+    },
+    {}
+  )
+  assert.ok(row.blocking.includes('rsl_lt_35'))
+  assert.ok(row.flags.some((f) => f.startsWith('rsl_from_reference_table:335.713.25')))
+  assert.equal(row.rslResolved.years, 30)
+})
+
+test('an unknown element reference blocks rather than defaulting', () => {
+  const row = computeRow(
+    {
+      name: 'x',
+      quantity: 1,
+      epd: { registration: 'E', standard: 'EN15804+A2', datasetType: 'specific', validUntil: '2030-01-01' },
+      rslSource: 'reference_table',
+      rslReference: '999.999.99',
+      gwpBiogenic: { A1A3: -100, A5: 0 },
+    },
+    {}
+  )
+  assert.ok(row.blocking.includes('rsl_reference_unknown'))
+  assert.equal(row.status, 'buiten_norm')
+})

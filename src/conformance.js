@@ -13,6 +13,7 @@
 
 import { formula2a, formula3, computeRow, formula5, formula6, sumGwpBiogenic } from './csc.js'
 import { CARBON_FRACTIONS, CO2_PER_C } from './rulesets.js'
+import { checkGate, failingElements } from './service-life.js'
 
 /**
  * @typedef {object} Case
@@ -318,6 +319,40 @@ export const CASES = [
         { label: 'A1–A3 (ONCRA-protocol), kg CO₂e', got: oncra.computed['4.iii'], want: 0.106917, tol: 1e-6 },
         { label: 'Bepalingsmethode blokkeert', got: csc.blocking.includes('negative_variant3'), want: true },
         { label: 'ONCRA levert een positief getal', got: oncra.computed['4.iii'] > 0, want: true },
+      ]
+    },
+  },
+  {
+    id: 'service-life-by-element',
+    title: 'Dezelfde plank, twee bouwdelen, wel of geen opslag',
+    source: 'BBSR Nutzungsdauern von Bauteilen, Stand 13-03-2026 (ref. 335.713.25 / 331.113.25 / 534.318.25)',
+    why:
+      'De 35-jaarsgrens is de blokkade op alle 194 gemeten datasets, en geen enkele EPD declareert ' +
+      'een levensduur. Dat komt doordat levensduur aan het bouwdeel hangt en niet aan het ' +
+      'materiaal: hetzelfde onbehandelde naaldhout haalt ≥50 jaar in een draagconstructie, 30 als ' +
+      'gevelbekleding en 10 als erfafscheiding. Een EPD kan dat per definitie niet weten.',
+    run() {
+      const structure = checkGate('331.113.25')
+      const cladding = checkGate('335.713.25')
+      const fence = checkGate('534.318.25')
+      const row = computeRow(
+        {
+          name: 'onbehandeld naaldhout als gevelbekleding',
+          quantity: 100,
+          epd: { registration: 'EPD-X', standard: 'EN15804+A2', datasetType: 'specific', validUntil: '2030-01-01' },
+          rslSource: 'reference_table',
+          rslReference: '335.713.25',
+          gwpBiogenic: { A1A3: -700, A5: 0 },
+        },
+        { ruleset: 'CSC-2026-02' }
+      )
+      return [
+        { label: 'draagconstructie, jaar', got: structure.years, want: 50 },
+        { label: 'gevelbekleding, jaar', got: cladding.years, want: 30 },
+        { label: 'erfafscheiding, jaar', got: fence.years, want: 10 },
+        { label: 'gevelbekleding blokkeert op levensduur', got: row.blocking.includes('rsl_lt_35'), want: true },
+        { label: 'herkomst zichtbaar in de uitkomst', got: row.flags.some((f) => f.startsWith('rsl_from_reference_table')), want: true },
+        { label: 'bouwdelen in de tabel die de grens niet halen', got: failingElements().length, want: 7 },
       ]
     },
   },

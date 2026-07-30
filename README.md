@@ -45,6 +45,7 @@ Each of these is a real, verified EN15804+A2 EPD. They are the reason the gates 
 | Thünen wood fibre insulation (ÖKOBAUDAT 34633906) | The EPD books −11.102 in A3 and exactly +11.102 in A5: the packaging cancels itself. Summing A1–A5 reproduces the separately declared biogenic carbon to **0.006%**; reading A1–A3 only — as the ONCRA protocol prescribes — **overstates by 4.69%**. |
 | Thünen CLT (ÖKOBAUDAT d8d40f2d) | Positive control. No packaging, so both independent routes agree to **0.002%**. |
 | Ecophon Master B Straw (environdec 3aa1f8dc) | Over A1–A5 the mandated variant returns **negative** storage and the row blocks; over A1–A3, as the ONCRA protocol prescribes, it returns **+0.107** and would pass. One product, two protocols, opposite sign. |
+| Untreated softwood, three elements (BBSR 331.113 / 335.713 / 534.318) | Same plank: **≥50 years** in a load-bearing wall, **30** as facade cladding, **10** as a fence. The first passes the gate; the other two do not. No EPD can express that, which is why none declares a service life. |
 | Poppies, Amsterdam (Oncra RJM-C-001) | Two DERIX MRPI EPDs over the documented 2,369 m³ reproduce the **certified 1,826 t to within 0.1%**. The method works where the data exists. |
 
 ## Rebuilding the product data
@@ -89,6 +90,24 @@ Two cross-checks worth having:
 - Reading A1–A3 only, as the ONCRA protocol prescribes, disagrees with the declared kg C by a
   **median 0.445%, max 4.690%** — and on 18 of the 131 derivable environdec records the mandated
   A1–A5 sum returns **negative** stored carbon, of which 5 **flip sign** between the two protocols.
+
+## The service-life problem
+
+The method excludes any product with a Reference Service Life under 35 years. Across the 194
+datasets above, **zero** declare one — and two manufacturers say outright that they will not:
+PAVATEX (EPD-PAV-20250684-IBC1-DE §2.12) states *"wird keine Referenz-Nutzungsdauer deklariert …
+Die durchschnittliche Nutzungsdauer liegt in der Größenordnung des Gebäudes."*
+
+They are not being unhelpful. Service life is a property of the **element**, not of the material,
+and an EPD describes a product without knowing where it will be installed. `src/service-life.js`
+carries a curated element-level reference (BBSR *Nutzungsdauern von Bauteilen*, Stand 13-03-2026 —
+the same federal body behind ÖKOBAUDAT), scoped to biobased construction and cited per entry.
+
+It **proposes**; it never decides. A row must name the element reference to use it, and the result
+is flagged `rsl_from_reference_table` so a reviewer can see the lifespan was asserted from guidance
+rather than declared by the manufacturer. An unknown reference blocks rather than defaulting.
+
+Of the 36 curated elements, 7 fall below the 35-year gate and 3 sit exactly on it.
 
 ## What it deliberately does not do
 

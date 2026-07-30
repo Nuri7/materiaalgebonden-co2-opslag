@@ -16,6 +16,7 @@
  */
 
 import { CO2_PER_C, getRuleset } from './rulesets.js'
+import { lookupServiceLife } from './service-life.js'
 
 /* ------------------------------------------------------------------ *
  * Formulas 2a / 2b / 3 — biogenic carbon content from physical inputs
@@ -119,7 +120,8 @@ export function sumGwpBiogenic(modules, required, optional = []) {
  * @param {'EN15804+A2'|'EN15804+A1'|string} [row.epd.standard]
  * @param {'specific'|'representative'|'generic'} [row.epd.datasetType]
  * @param {number|null} [row.rslYears]
- * @param {string} [row.rslSource]           'epd' | 'category_default' | 'user_asserted' | 'unknown'
+ * @param {string} [row.rslSource]           'epd' | 'reference_table' | 'user_asserted' | 'unknown'
+ * @param {string} [row.rslReference]        BBSR element reference, required when rslSource is 'reference_table'
  * @param {Record<string,number>} [row.gwpBiogenic]     per module, kg CO2e per declared unit
  * @param {number} [row.co2BioPerUnit]                  Variant 4.i input, kg CO2e per unit, excl. packaging
  * @param {number} [row.cBioPerUnit]                    Variant 4.ii input, kg C per unit, excl. packaging
@@ -281,9 +283,23 @@ export function computeRow(row, opts = {}) {
     }
   }
 
-  if (row.rslYears === undefined || row.rslYears === null || row.rslSource === 'unknown') {
+  // Service life. Never defaulted, never guessed. A reference-table value is a proposal that the
+  // row must opt into by naming the element, and the output says so.
+  let rslYears = row.rslYears
+  if (row.rslSource === 'reference_table') {
+    const e = row.rslReference ? lookupServiceLife(row.rslReference) : null
+    if (!e) {
+      blocking.push('rsl_reference_unknown')
+    } else {
+      rslYears = e.years
+      out.rslResolved = { years: e.years, isMinimum: !!e.min, ref: row.rslReference, source: e.source }
+      flags.push(`rsl_from_reference_table:${row.rslReference}`)
+    }
+  }
+
+  if (rslYears === undefined || rslYears === null || row.rslSource === 'unknown') {
     blocking.push('rsl_unknown')
-  } else if (row.rslYears < rs.minRslYears) {
+  } else if (rslYears < rs.minRslYears) {
     blocking.push('rsl_lt_35')
   }
 
